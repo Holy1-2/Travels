@@ -1,0 +1,182 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: light;
+    --forest: #15473a;
+    --green: #256b57;
+    --accent: #be5b3f;
+    --soft: #f7f7f5;
+    --ink: #1b1b19;
+    --mute: #6d6d66;
+    --line: #e8e8e2;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    scroll-padding-top: 100px;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    background-color: #ffffff;
+    font-family: var(--font-inter), system-ui, sans-serif;
+    color: #1B1B19;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-manrope), system-ui, sans-serif;
+    font-weight: 600;
+    color: #1B1B19;
+    letter-spacing: -0.035em;
+  }
+
+  h1 .italic,
+  h2 .italic,
+  h3 .italic {
+    font-style: normal;
+  }
+
+  ::selection {
+    background: rgba(190, 91, 63, 0.16);
+    color: #15473a;
+  }
+
+  :focus-visible {
+    outline: 2px solid rgba(21, 71, 58, 0.7);
+    outline-offset: 3px;
+    border-radius: 8px;
+  }
+
+  input[type='date']::-webkit-calendar-picker-indicator {
+    opacity: 0.4;
+    cursor: pointer;
+  }
+
+  input[type='date']::-webkit-calendar-picker-indicator:hover {
+    opacity: 0.75;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@layer components {
+  .wrap {
+    @apply mx-auto w-full max-w-wrap px-5 sm:px-7 lg:px-8;
+  }
+
+  .eyebrow {
+    @apply inline-flex items-center gap-2.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-pine;
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-full bg-forest px-5 py-2.5 text-[14px] font-semibold text-white transition duration-300 ease-smooth hover:bg-pine;
+  }
+
+  .btn-gold {
+    @apply inline-flex items-center justify-center gap-2 rounded-full bg-gold px-5 py-2.5 text-[14px] font-semibold text-white transition duration-300 ease-smooth hover:bg-[#a94d35];
+  }
+
+  .btn-outline {
+    @apply inline-flex items-center justify-center gap-2 rounded-full border border-ink/15 bg-white px-5 py-2.5 text-[14px] font-semibold text-ink transition duration-300 ease-smooth hover:border-ink/35 hover:bg-soft;
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 rounded-full px-4 py-2 text-[14px] font-medium text-ink transition hover:bg-soft;
+  }
+
+  .card-surface {
+    @apply rounded-2xl border border-line bg-white;
+  }
+
+  .tag-pill {
+    @apply inline-flex items-center gap-1 rounded-full bg-white/95 px-2.5 py-1.5 text-[11.5px] font-semibold text-ink shadow-sm backdrop-blur-sm;
+  }
+
+  .chip {
+    @apply inline-flex items-center gap-1.5 rounded-full border border-line bg-white px-3.5 py-1.5 text-[13px] font-medium text-mute transition hover:border-ink/25 hover:text-ink;
+  }
+
+  .field-label {
+    @apply mb-1 block text-[11px] font-semibold uppercase tracking-[0.12em] text-ink/55;
+  }
+
+  .field-input {
+    @apply w-full rounded-xl border border-line bg-white px-4 py-3 text-[15px] text-ink outline-none transition placeholder:text-mute/50 focus:border-forest/40 focus:ring-4 focus:ring-forest/5;
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .grain {
+    position: relative;
+    isolation: isolate;
+  }
+
+  .grain::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    opacity: 0.12;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.14'/%3E%3C/svg%3E");
+    mix-blend-mode: multiply;
+  }
+
+  .focus-ring {
+    @apply focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-forest/20 focus-visible:ring-offset-2;
+  }
+
+  .prose-copy p {
+    @apply text-[15.5px] leading-[1.75] text-mute;
+  }
+
+  .prose-copy p + p {
+    @apply mt-4;
+  }
+}
+
+@layer utilities {
+  .text-shadow-soft {
+    text-shadow: 0 1px 18px rgba(8, 42, 31, 0.28);
+  }
+
+  .bg-hero-wash {
+    background: linear-gradient(180deg, #ffffff 0%, #fafaf7 100%);
+  }
+
+  .bg-forest-wash {
+    background: linear-gradient(155deg, #15473a 0%, #10382d 55%, #15473a 100%);
+  }
+
+  .mask-fade-r {
+    mask-image: linear-gradient(to right, black 80%, transparent 100%);
+  }
+}
