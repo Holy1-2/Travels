@@ -7,17 +7,10 @@ import StayCard from '@/components/StayCard';
 import ExperienceCard from '@/components/ExperienceCard';
 import Reveal from '@/components/Reveal';
 import SectionHeader from '@/components/SectionHeader';
-import {
-  experiencesInRegion,
-  regionMap,
-  regions,
-  staysInRegion,
-  type RegionSlug,
-} from '@/lib/data';
+import { regionMap, regions, type RegionSlug } from '@/lib/data';
+import { getExperiencesInRegion, getStaysInRegion } from '@/lib/server/content';
 
-export function generateStaticParams() {
-  return regions.map((region) => ({ slug: region.slug }));
-}
+export const dynamic = 'force-dynamic';
 
 export async function generateMetadata({
   params,
@@ -43,8 +36,8 @@ export default async function DestinationPage({
   const region = regionMap[slug as RegionSlug];
   if (!region) notFound();
 
-  const regionStays = staysInRegion(region.slug);
-  const regionExperiences = experiencesInRegion(region.slug);
+  const regionStays = getStaysInRegion(region.slug);
+  const regionExperiences = getExperiencesInRegion(region.slug);
   const otherRegions = regions.filter((item) => item.slug !== region.slug);
 
   return (

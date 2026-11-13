@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import StayCard from './StayCard';
-import { STAY_TYPES, regions, stays, type StayType } from '@/lib/data';
+import { STAY_TYPES, type Region, type Stay, type StayType } from '@/lib/data';
 import { formatRange, cn } from '@/lib/utils';
 
 type SortKey = 'recommended' | 'price-asc' | 'price-desc' | 'rating';
@@ -42,6 +42,8 @@ function isStayType(value: string | undefined): value is StayType {
 }
 
 export default function StaysExplorer({
+  stays,
+  regions,
   initialType,
   initialRegion,
   initialSort,
@@ -49,6 +51,8 @@ export default function StaysExplorer({
   checkOut,
   guests,
 }: {
+  stays: Stay[];
+  regions: Region[];
   initialType?: string;
   initialRegion?: string;
   initialSort?: string;
@@ -79,7 +83,7 @@ export default function StaysExplorer({
     if (sort === 'price-desc') return [...list].sort((a, b) => b.price - a.price);
     if (sort === 'rating') return [...list].sort((a, b) => b.rating - a.rating);
     return list;
-  }, [type, region, sort]);
+  }, [stays, type, region, sort]);
 
   const stayQuery = useMemo(() => {
     const params = new URLSearchParams();

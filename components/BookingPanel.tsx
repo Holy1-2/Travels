@@ -72,16 +72,16 @@ export default function BookingPanel(props: BookingPanelProps) {
   const submit = () => {
     if (dateInvalid) return;
     const params = new URLSearchParams();
+    params.set('kind', isStay ? 'stay' : 'experience');
+    params.set('slug', props.slug);
+    params.set('guests', String(guests));
     if (isStay) {
       params.set('checkin', checkIn);
       params.set('checkout', checkOut);
-      params.set('guests', String(guests));
-      router.push(`/stays/${props.slug}/confirmation?${params.toString()}`);
     } else {
       params.set('date', visitDate);
-      params.set('guests', String(guests));
-      router.push(`/experiences/${props.slug}/confirmation?${params.toString()}`);
     }
+    router.push(`/checkout?${params.toString()}`);
   };
 
   const changeGuests = (delta: number) => {
@@ -104,7 +104,9 @@ export default function BookingPanel(props: BookingPanelProps) {
           <span className="text-[13.5px] text-mute">{isStay ? '/ night' : '/ person'}</span>
         </p>
         {!isStay ? (
-          <p className="mt-1 text-[12.5px] text-mute">{expProps?.groupSize} · fees included at checkout</p>
+          <p className="mt-1 text-[12.5px] text-mute">
+            {expProps?.groupSize} · secure online payment
+          </p>
         ) : null}
       </div>
 
@@ -225,14 +227,14 @@ export default function BookingPanel(props: BookingPanelProps) {
           disabled={dateInvalid}
           className="btn-primary mt-5 w-full disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {isStay ? 'Request this stay' : 'Request this experience'}
+          Continue to checkout
           <ArrowRight className="h-4 w-4" />
         </button>
 
         <p className="mt-3 flex items-start gap-1.5 text-[11.5px] leading-relaxed text-mute">
           <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-pine" />
-          No payment online. A local host confirms availability and payment (MoMo, Airtel or card)
-          within 24 hours.
+          Pay securely in the app with MTN MoMo, Airtel Money, Visa or Mastercard. Your dates are
+          held while you complete payment.
         </p>
 
         {isStay && !dateInvalid ? (

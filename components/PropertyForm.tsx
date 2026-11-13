@@ -1,9 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { ArrowRight, Check, ShieldCheck } from 'lucide-react';
+import { AlertCircle, ArrowRight, Check, Loader2, ShieldCheck } from 'lucide-react';
 import { regions, STAY_TYPES } from '@/lib/data';
-import { bookingRef } from '@/lib/utils';
 
 const inputClass =
   'mt-1.5 w-full rounded-xl border border-line bg-white px-4 py-3 text-[14.5px] text-ink outline-none transition placeholder:text-mute/50 focus:border-forest/40 focus:ring-4 focus:ring-forest/5';
@@ -12,16 +11,49 @@ const labelClass = 'block text-[12.5px] font-medium text-ink';
 
 export default function PropertyForm() {
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
   const [reference, setReference] = useState('');
   const [propertyName, setPropertyName] = useState('');
 
-  const submit = (event: React.FormEvent<HTMLFormElement>) => {
+  const submit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    setError('');
+    setSubmitting(true);
+
     const data = new FormData(event.currentTarget);
     const name = String(data.get('property') || '');
-    setPropertyName(name);
-    setReference(bookingRef(name + String(Date.now())));
-    setSubmitted(true);
+
+    try {
+      const response = await fetch('/api/listing-requests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          propertyName: name,
+          propertyType: String(data.get('type') || ''),
+          region: String(data.get('region') || ''),
+          rooms: Number(data.get('rooms') || 0),
+          contactName: String(data.get('name') || ''),
+          email: String(data.get('email') || ''),
+          phone: String(data.get('phone') || ''),
+          notes: String(data.get('notes') || ''),
+        }),
+      });
+      const payload = await response.json();
+
+      if (!response.ok) {
+        setError(payload.error || 'We could not send that. Please check the details and try again.');
+        return;
+      }
+
+      setPropertyName(name);
+      setReference(payload.request.id);
+      setSubmitted(true);
+    } catch {
+      setError('Network error. Check your connection and try again.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   if (submitted) {
@@ -148,14 +180,30 @@ export default function PropertyForm() {
         </label>
       </div>
 
+      {error ? (
+        <p role="alert" className="mt-4 flex items-start gap-2 rounded-xl border border-clay/30 bg-clay/5 px-4 py-3 text-[12.5px] leading-relaxed text-ink">
+          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-clay" />
+          {error}
+        </p>
+      ) : null}
+
       <div className="mt-6 flex flex-col gap-4 border-t border-line pt-5 sm:flex-row sm:items-center sm:justify-between">
         <p className="flex items-start gap-2 text-[12px] leading-relaxed text-mute">
           <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-forest" strokeWidth={1.8} />
           No listing fee. We visit every property before it goes live.
         </p>
-        <button type="submit" className="btn-primary shrink-0">
-          Request a listing
-          <ArrowRight className="h-4 w-4" />
+        <button type="submit" disabled={submitting} className="btn-primary shrink-0">
+          {submitting ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Sending
+            </>
+          ) : (
+            <>
+              Request a listing
+              <ArrowRight className="h-4 w-4" />
+            </>
+          )}
         </button>
       </div>
     </form>

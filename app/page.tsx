@@ -7,29 +7,24 @@ import {
   CreditCard,
   MapPin,
   ShieldCheck,
-  Star,
   Users,
 } from 'lucide-react';
-import SearchBar from '@/components/SearchBar';
+import Hero from '@/components/Hero';
 import SectionHeader from '@/components/SectionHeader';
 import DestinationCard from '@/components/DestinationCard';
 import StayCard from '@/components/StayCard';
 import ExperienceCard from '@/components/ExperienceCard';
 import VideoSection from '@/components/VideoSection';
 import Reveal from '@/components/Reveal';
-import { experiences, regions, stays, staysInRegion } from '@/lib/data';
+import { regions, type Experience, type RegionSlug } from '@/lib/data';
+import { getExperiences, getStays } from '@/lib/server/content';
+
+export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
   description:
     'Handpicked hotels, lodges, camps and villas across Rwanda. Book gorilla trekking, Lake Kivu sunsets, Nyungwe canopy walks and Akagera safaris with local hosts.',
 };
-
-const featuredStays = stays.slice(0, 8);
-const previewExperiences = [
-  experiences.find((item) => item.slug === 'gorilla-trekking')!,
-  experiences.find((item) => item.slug === 'kivu-boat-cruise')!,
-  experiences.find((item) => item.slug === 'nyungwe-canopy-walk')!,
-];
 
 const promises = [
   {
@@ -40,7 +35,7 @@ const promises = [
   {
     icon: CreditCard,
     title: 'Pay the Rwandan way',
-    copy: 'Prices in RWF. Pay with MTN MoMo, Airtel Money, Visa or Mastercard once your host confirms.',
+    copy: 'Prices in RWF. Pay securely in the app with MTN MoMo, Airtel Money, Visa or Mastercard.',
   },
   {
     icon: Users,
@@ -54,120 +49,26 @@ const promises = [
   },
 ];
 
-export default function HomePage() {
+export default async function HomePage() {
+  const stays = await getStays();
+  const experiences = await getExperiences();
+
+  const featuredStays = stays.slice(0, 8);
+  const previewExperiences = ['gorilla-trekking', 'kivu-boat-cruise', 'nyungwe-canopy-walk']
+    .map((slug) => experiences.find((experience) => experience.slug === slug))
+    .filter((experience): experience is Experience => Boolean(experience));
+  const countInRegion = (slug: RegionSlug) => stays.filter((stay) => stay.region === slug).length;
+
   return (
     <div>
-      <section className="grain relative overflow-hidden bg-hero-wash">
-        <div className="wrap grid gap-12 pb-16 pt-10 lg:grid-cols-[1.02fr_0.98fr] lg:items-center lg:gap-16 lg:pb-24 lg:pt-16">
-          <div>
-            <p className="eyebrow">Murakaza neza · Welcome to Rwanda</p>
-            <h1 className="mt-5 max-w-[15ch] text-balance font-display text-[clamp(40px,5.6vw,64px)] font-semibold leading-[1.02] tracking-[-0.045em] text-ink">
-              Stay well in the land of a{' '}
-              <span className="text-forest">thousand hills.</span>
-            </h1>
-            <p className="mt-5 max-w-lg text-[15.5px] leading-relaxed text-mute">
-              Sleep beside the Virunga volcanoes, swim off a Lake Kivu deck and wake inside the
-              Nyungwe canopy. Handpicked stays and local experiences, booked in one calm place.
-            </p>
-
-            <div className="mt-7">
-              <SearchBar variant="hero" />
-            </div>
-
-            <dl className="mt-9 grid max-w-xl grid-cols-2 gap-x-6 gap-y-5 border-t border-line pt-7 sm:grid-cols-4">
-              {[
-                { value: '12', label: 'handpicked stays' },
-                { value: '6', label: 'regions' },
-                { value: '4.8', label: 'guest rating' },
-                { value: '10', label: 'experiences' },
-              ].map((stat) => (
-                <div key={stat.label}>
-                  <dt className="sr-only">{stat.label}</dt>
-                  <dd>
-                    <span className="font-display text-[25px] font-semibold leading-none tracking-[-0.02em] text-ink">
-                      {stat.value}
-                    </span>
-                    <span className="mt-1.5 block text-[10.5px] font-semibold uppercase tracking-[0.12em] text-mute">
-                      {stat.label}
-                    </span>
-                  </dd>
-                </div>
-              ))}
-            </dl>
-          </div>
-
-          <div className="relative mx-auto w-full max-w-[520px] lg:max-w-none">
-            <div className="relative ml-auto aspect-[4/5] w-[90%] overflow-hidden rounded-3xl bg-mist sm:w-[86%]">
-              <Image
-                src="/images/hero/hero-gorilla.jpg"
-                alt="Mountain gorilla in the bamboo forest of Volcanoes National Park"
-                fill
-                priority
-                sizes="(max-width: 1024px) 90vw, 46vw"
-                quality={82}
-                className="object-cover"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-transparent" />
-              <div className="absolute inset-x-4 bottom-4 flex items-end justify-between gap-3">
-                <div className="rounded-xl border border-white/20 bg-black/20 px-4 py-3 text-white backdrop-blur-md">
-                  <p className="text-[9.5px] font-semibold uppercase tracking-[0.18em] text-white/65">
-                    Up close
-                  </p>
-                  <p className="mt-1 font-display text-[17px] font-semibold leading-tight text-white">
-                    Volcanoes National Park
-                  </p>
-                  <p className="mt-0.5 text-[11.5px] text-white/65">Musanze · Northern Province</p>
-                </div>
-                <Link
-                  href="/destinations/volcanoes"
-                  aria-label="Explore Volcanoes National Park"
-                  className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white text-ink transition hover:bg-soft"
-                >
-                  <ArrowUpRight className="h-[18px] w-[18px]" />
-                </Link>
-              </div>
-            </div>
-
-            <div className="animate-float absolute -left-2 bottom-16 z-10 hidden w-[36%] overflow-hidden rounded-2xl border-4 border-white bg-mist shadow-lift sm:block lg:-left-5">
-              <div className="relative aspect-[4/5]">
-                <Image
-                  src="/images/hero/hero-kivu.jpg"
-                  alt="Sunset over Lake Kivu"
-                  fill
-                  sizes="20vw"
-                  quality={80}
-                  className="object-cover"
-                />
-              </div>
-            </div>
-
-            <div className="absolute -right-1 top-5 z-10 hidden w-[32%] overflow-hidden rounded-2xl border-4 border-white bg-mist shadow-lift md:block">
-              <div className="relative aspect-square">
-                <Image
-                  src="/images/hero/hero-tea.jpg"
-                  alt="Tea pickers on a green hillside in Rwanda"
-                  fill
-                  sizes="18vw"
-                  quality={80}
-                  className="object-cover"
-                />
-              </div>
-            </div>
-
-            <div className="absolute -left-1 top-5 z-10 flex items-center gap-2 rounded-full border border-line bg-white px-3.5 py-2 shadow-soft sm:-left-2 lg:top-10">
-              <span className="relative flex h-2 w-2">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-fern opacity-60" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-fern" />
-              </span>
-              <span className="text-[11px] font-semibold text-ink">Hosts replying now</span>
-              <span className="flex items-center gap-0.5 text-[11px] font-medium text-mute">
-                <Star className="h-3 w-3 fill-ink text-ink" />
-                4.8
-              </span>
-            </div>
-          </div>
-        </div>
-      </section>
+      <Hero
+        image="/images/hero/hero-kivu.jpg"
+        imageAlt="Sunset over Lake Kivu and the green hills of western Rwanda"
+        location="Lake Kivu · Rubavu"
+        stayCount={stays.length}
+        regionCount={regions.length}
+        experienceCount={experiences.length}
+      />
 
       <section className="wrap pt-20 lg:pt-28">
         <Reveal>
@@ -193,7 +94,7 @@ export default function HomePage() {
             <Reveal key={region.slug} delay={Math.min(index * 0.06, 0.3)}>
               <DestinationCard
                 region={region}
-                stayCount={staysInRegion(region.slug).length}
+                stayCount={countInRegion(region.slug)}
                 eager={index < 3}
               />
             </Reveal>
@@ -211,7 +112,12 @@ export default function HomePage() {
                   Rooms with a <span className="text-forest">point of view.</span>
                 </>
               }
-              subtitle="Eight of our twelve handpicked stays, from a 65,000 RWF garden guesthouse to a signature volcano retreat."
+              subtitle={
+                <>
+                  {featuredStays.length} of our {stays.length} handpicked stays, from a garden
+                  guesthouse in Kigali to a signature volcano retreat.
+                </>
+              }
               action={
                 <Link href="/stays" className="btn-primary">
                   Browse all stays
@@ -231,7 +137,7 @@ export default function HomePage() {
 
           <Reveal className="mt-12 text-center">
             <p className="text-[13.5px] text-mute">
-              Showing 8 of {stays.length} stays · prices per night in RWF
+              Showing {featuredStays.length} of {stays.length} stays · prices per night in RWF
             </p>
             <Link
               href="/stays"
@@ -290,7 +196,7 @@ export default function HomePage() {
                 Mornings you will <span className="text-forest">talk about.</span>
               </>
             }
-            subtitle="Trek with gorillas, drift across Lake Kivu at golden hour, or cross the Nyungwe canopy. Ten experiences, all led by local guides."
+            subtitle={`Trek with gorillas, drift across Lake Kivu at golden hour, or cross the Nyungwe canopy. ${experiences.length} experiences, all led by local guides.`}
             action={
               <Link href="/experiences" className="btn-outline">
                 All experiences
@@ -374,7 +280,7 @@ export default function HomePage() {
               </h2>
               <p className="mx-auto mt-3.5 max-w-lg text-[15px] leading-relaxed text-mute">
                 Tell us when you are coming and we will match you with the right hillside, lake
-                shore or forest camp. No payment until a host confirms.
+                shore or forest camp. Check availability in seconds and pay securely in the app.
               </p>
               <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
                 <Link href="/stays" className="btn-primary">

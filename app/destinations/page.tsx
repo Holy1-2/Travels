@@ -4,7 +4,10 @@ import { ArrowRight, Compass, MapPin, Mountain, Waves } from 'lucide-react';
 import DestinationCard from '@/components/DestinationCard';
 import Reveal from '@/components/Reveal';
 import SectionHeader from '@/components/SectionHeader';
-import { experiences, regions, stays, staysInRegion } from '@/lib/data';
+import { regions } from '@/lib/data';
+import { getExperiences, getStays } from '@/lib/server/content';
+
+export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
   title: 'Destinations',
@@ -31,6 +34,10 @@ const tips = [
 ];
 
 export default function DestinationsPage() {
+  const stays = getStays();
+  const experiences = getExperiences();
+  const staysInRegion = (slug: string) => stays.filter((stay) => stay.region === slug);
+
   return (
     <div>
       <section className="border-b border-line bg-hero-wash">

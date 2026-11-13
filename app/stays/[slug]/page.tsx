@@ -17,8 +17,11 @@ import FavoriteButton from '@/components/FavoriteButton';
 import StayCard from '@/components/StayCard';
 import Reveal from '@/components/Reveal';
 import SectionHeader from '@/components/SectionHeader';
-import { getStay, regionMap, stays, staysInRegion, type Stay } from '@/lib/data';
+import { regionMap, type Stay } from '@/lib/data';
+import { getStayBySlug, getStays, getStaysInRegion } from '@/lib/server/content';
 import { firstParam, rwf } from '@/lib/utils';
+
+export const dynamic = 'force-dynamic';
 
 const TYPE_LABEL: Record<Stay['type'], string> = {
   Hotels: 'Hotel',
@@ -28,17 +31,13 @@ const TYPE_LABEL: Record<Stay['type'], string> = {
   Guesthouses: 'Guesthouse',
 };
 
-export function generateStaticParams() {
-  return stays.map((stay) => ({ slug: stay.slug }));
-}
-
 export async function generateMetadata({
   params,
 }: {
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const stay = getStay(slug);
+  const stay = getStayBySlug(slug);
   if (!stay) return {};
   return {
     title: stay.name,
@@ -56,16 +55,18 @@ export default async function StayPage({
 }) {
   const { slug } = await params;
   const query = await searchParams;
-  const stay = getStay(slug);
+  const stay = getStayBySlug(slug);
   if (!stay) notFound();
 
   const region = regionMap[stay.region];
-  const related = staysInRegion(stay.region)
+  const related = getStaysInRegion(stay.region)
     .filter((item) => item.slug !== stay.slug)
     .slice(0, 4);
   const suggestions = related.length
     ? related
-    : stays.filter((item) => item.slug !== stay.slug).slice(0, 4);
+    : getStays()
+        .filter((item) => item.slug !== stay.slug)
+        .slice(0, 4);
 
   const checkIn = firstParam(query.checkin);
   const checkOut = firstParam(query.checkout);

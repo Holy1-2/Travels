@@ -5,6 +5,8 @@ out
 *.pem
 npm-debug.log*
 .env*
+!.env.example
+data/
 next-env.d.ts
 assets-src/*.png
 assets-src/*.html

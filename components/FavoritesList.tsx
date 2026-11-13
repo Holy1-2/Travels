@@ -4,9 +4,9 @@ import Link from 'next/link';
 import { Heart, Search } from 'lucide-react';
 import StayCard from './StayCard';
 import { useFavorites } from './FavoritesProvider';
-import { stays } from '@/lib/data';
+import type { Stay } from '@/lib/data';
 
-export default function FavoritesList() {
+export default function FavoritesList({ stays }: { stays: Stay[] }) {
   const { favorites, ready } = useFavorites();
 
   if (!ready) {

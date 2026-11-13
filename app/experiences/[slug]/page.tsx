@@ -16,12 +16,11 @@ import BookingPanel from '@/components/BookingPanel';
 import ExperienceCard from '@/components/ExperienceCard';
 import Reveal from '@/components/Reveal';
 import SectionHeader from '@/components/SectionHeader';
-import { experiences, getExperience, regionMap } from '@/lib/data';
+import { regionMap } from '@/lib/data';
+import { getExperienceBySlug, getExperiences } from '@/lib/server/content';
 import { firstParam } from '@/lib/utils';
 
-export function generateStaticParams() {
-  return experiences.map((experience) => ({ slug: experience.slug }));
-}
+export const dynamic = 'force-dynamic';
 
 export async function generateMetadata({
   params,
@@ -29,7 +28,7 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const experience = getExperience(slug);
+  const experience = getExperienceBySlug(slug);
   if (!experience) return {};
   return {
     title: experience.name,
@@ -47,14 +46,17 @@ export default async function ExperiencePage({
 }) {
   const { slug } = await params;
   const query = await searchParams;
-  const experience = getExperience(slug);
+  const experience = getExperienceBySlug(slug);
   if (!experience) notFound();
 
+  const allExperiences = getExperiences();
   const region = regionMap[experience.region];
-  const related = experiences
+  const related = allExperiences
     .filter((item) => item.slug !== experience.slug && item.region === experience.region)
     .slice(0, 3);
-  const fallback = experiences.filter((item) => item.slug !== experience.slug).slice(0, 3);
+  const fallback = allExperiences
+    .filter((item) => item.slug !== experience.slug)
+    .slice(0, 3);
   const suggestions = related.length ? related : fallback;
 
   const initialDate = firstParam(query.date);

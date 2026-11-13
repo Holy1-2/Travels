@@ -1,0 +1,348 @@
+import { db, minutesAgoISO, nowISO } from './db';
+import { ApiError } from './http';
+import { quoteBooking, type Quote } from './pricing';
+import { uniqueReference } from './references';
+import type {
+  BookingKind,
+  BookingRow,
+  BookingStatus,
+  PaymentRow,
+  PublicBooking,
+  PublicBookingSummary,
+} from './types';
+import { toPublicBooking, toPublicBookingSummary } from './types';
+
+// An unpaid booking holds dates for this long, then the dates free up again.
+export const HOLD_MINUTES = 30;
+
+function referenceExists(reference: string) {
+  return Boolean(db.prepare('SELECT 1 FROM bookings WHERE reference = ?').get(reference));
+}
+
+export function getBookingRow(reference: string) {
+  return db
+    .prepare('SELECT * FROM bookings WHERE reference = ?')
+    .get(reference.toUpperCase()) as BookingRow | undefined;
+}
+
+export function getPaymentsForBooking(reference: string) {
+  return db
+    .prepare('SELECT * FROM payments WHERE booking_reference = ? ORDER BY created_at DESC')
+    .all(reference.toUpperCase()) as PaymentRow[];
+}
+
+export function getBooking(reference: string): PublicBooking | null {
+  const row = getBookingRow(reference);
+  if (!row) return null;
+  return toPublicBooking(row, getPaymentsForBooking(row.reference));
+}
+
+export function recordEvent(reference: string, type: string, detail?: string) {
+  db.prepare(
+    'INSERT INTO booking_events (booking_reference, type, detail, created_at) VALUES (?, ?, ?, ?)'
+  ).run(reference, type, detail ?? null, nowISO());
+}
+
+interface HeldRow {
+  reference: string;
+  check_in: string;
+  check_out: string | null;
+  guests: number;
+  status: BookingStatus;
+  payment_status: string;
+  created_at: string;
+}
+
+function heldRows(kind: BookingKind, slug: string) {
+  const rows = db
+    .prepare(
+      `SELECT reference, check_in, check_out, guests, status, payment_status, created_at
+       FROM bookings
+       WHERE kind = ? AND item_slug = ? AND status IN ('pending', 'confirmed')`
+    )
+    .all(kind, slug) as HeldRow[];
+
+  const cutoff = minutesAgoISO(HOLD_MINUTES);
+
+  return rows.filter(
+    (row) =>
+      row.status === 'confirmed' ||
+      row.payment_status === 'paid' ||
+      row.payment_status === 'processing' ||
+      row.created_at >= cutoff
+  );
+}
+
+function assertStayAvailable(slug: string, checkIn: string, checkOut: string) {
+  const conflict = heldRows('stay', slug).find(
+    (row) =>
+      row.check_in < checkOut && (row.check_out ?? row.check_in) > checkIn
+  );
+
+  if (conflict) {
+    throw new ApiError(
+      409,
+      'Those dates were just taken. Please choose another check-in or check-out date.',
+      'dates_unavailable'
+    );
+  }
+}
+
+function assertExperienceAvailable(slug: string, date: string, guests: number) {
+  const bookedGuests = heldRows('experience', slug)
+    .filter((row) => row.check_in === date)
+    .reduce((total, row) => total + row.guests, 0);
+
+  // Experiences are small-group; leave headroom for other guests on the date.
+  if (bookedGuests + guests > 20) {
+    throw new ApiError(
+      409,
+      'That date is fully booked for this experience. Please choose another date.',
+      'date_unavailable'
+    );
+  }
+}
+
+export interface CreateBookingInput {
+  kind: BookingKind;
+  slug: string;
+  checkIn: string;
+  checkOut?: string | null;
+  guests: number;
+  guest: { name: string; email: string; phone: string };
+  notes?: string;
+}
+
+const insertBooking = db.prepare(`
+  INSERT INTO bookings (
+    reference, kind, item_slug, item_name, guest_name, guest_email, guest_phone,
+    check_in, check_out, guests, nights, unit_price, subtotal, service_fee, total,
+    currency, status, payment_status, notes, created_at, updated_at
+  ) VALUES (
+    @reference, @kind, @item_slug, @item_name, @guest_name, @guest_email, @guest_phone,
+    @check_in, @check_out, @guests, @nights, @unit_price, @subtotal, @service_fee, @total,
+    @currency, 'pending', 'unpaid', @notes, @created_at, @updated_at
+  )
+`);
+
+export function createBooking(input: CreateBookingInput): PublicBooking {
+  const quote: Quote = quoteBooking({
+    kind: input.kind,
+    slug: input.slug,
+    guests: input.guests,
+    checkIn: input.checkIn,
+    checkOut: input.checkOut,
+  });
+
+  const run = db.transaction(() => {
+    if (quote.kind === 'stay') {
+      assertStayAvailable(quote.slug, quote.checkIn, quote.checkOut!);
+    } else {
+      assertExperienceAvailable(quote.slug, quote.checkIn, quote.guests);
+    }
+
+    const reference = uniqueReference(referenceExists);
+    const timestamp = nowISO();
+
+    insertBooking.run({
+      reference,
+      kind: quote.kind,
+      item_slug: quote.slug,
+      item_name: quote.name,
+      guest_name: input.guest.name,
+      guest_email: input.guest.email.toLowerCase(),
+      guest_phone: input.guest.phone,
+      check_in: quote.checkIn,
+      check_out: quote.checkOut,
+      guests: quote.guests,
+      nights: quote.nights,
+      unit_price: quote.unitPrice,
+      subtotal: quote.subtotal,
+      service_fee: quote.serviceFee,
+      total: quote.total,
+      currency: quote.currency,
+      notes: input.notes ?? '',
+      created_at: timestamp,
+      updated_at: timestamp,
+    });
+
+    recordEvent(reference, 'booking_created', `${quote.kind}:${quote.slug}`);
+    return reference;
+  });
+
+  const reference = run();
+  return getBooking(reference)!;
+}
+
+export function setBookingStatus(
+  reference: string,
+  status: BookingStatus,
+  paymentStatus?: BookingRow['payment_status']
+) {
+  const timestamp = nowISO();
+  if (paymentStatus) {
+    db.prepare(
+      'UPDATE bookings SET status = ?, payment_status = ?, updated_at = ? WHERE reference = ?'
+    ).run(status, paymentStatus, timestamp, reference.toUpperCase());
+  } else {
+    db.prepare('UPDATE bookings SET status = ?, updated_at = ? WHERE reference = ?').run(
+      status,
+      timestamp,
+      reference.toUpperCase()
+    );
+  }
+}
+
+export function markBookingPaid(reference: string) {
+  db.prepare(
+    `UPDATE bookings
+     SET payment_status = 'paid', status = 'confirmed', updated_at = ?
+     WHERE reference = ?`
+  ).run(nowISO(), reference.toUpperCase());
+  recordEvent(reference, 'payment_confirmed');
+}
+
+export function markBookingPaymentFailed(reference: string) {
+  db.prepare(
+    `UPDATE bookings
+     SET payment_status = 'failed', status = 'pending', updated_at = ?
+     WHERE reference = ? AND payment_status != 'paid'`
+  ).run(nowISO(), reference.toUpperCase());
+  recordEvent(reference, 'payment_failed');
+}
+
+export function cancelBooking(reference: string, email?: string): PublicBooking {
+  const row = getBookingRow(reference);
+  if (!row) throw new ApiError(404, 'Booking not found.', 'not_found');
+
+  if (email && row.guest_email.toLowerCase() !== email.toLowerCase()) {
+    throw new ApiError(403, 'That email does not match this booking.', 'forbidden');
+  }
+  if (row.payment_status === 'paid') {
+    throw new ApiError(
+      409,
+      'This booking is already paid. Contact hello@hamubere.com and we will help with a change or refund.',
+      'paid_booking'
+    );
+  }
+  if (row.status === 'cancelled') return getBooking(reference)!;
+
+  db.transaction(() => {
+    db.prepare(
+      `UPDATE payments SET status = 'cancelled', updated_at = ?
+       WHERE booking_reference = ? AND status IN ('pending', 'processing')`
+    ).run(nowISO(), row.reference);
+    setBookingStatus(row.reference, 'cancelled', 'unpaid');
+    recordEvent(row.reference, 'booking_cancelled', 'guest_cancelled');
+  })();
+
+  return getBooking(reference)!;
+}
+
+export function findBookingByReferenceAndEmail(reference: string, email: string) {
+  const row = getBookingRow(reference);
+  if (!row) return null;
+  if (row.guest_email.toLowerCase() !== email.toLowerCase()) return null;
+  return toPublicBooking(row, getPaymentsForBooking(row.reference));
+}
+
+export function listBookings(limit = 50, offset = 0) {
+  const rows = db
+    .prepare('SELECT * FROM bookings ORDER BY created_at DESC LIMIT ? OFFSET ?')
+    .all(Math.min(limit, 200), Math.max(offset, 0)) as BookingRow[];
+  return rows.map(toPublicBookingSummary);
+}
+
+export function bookedStayRanges(slug: string) {
+  return heldRows('stay', slug)
+    .map((row) => ({ checkIn: row.check_in, checkOut: row.check_out }))
+    .filter((range): range is { checkIn: string; checkOut: string } => Boolean(range.checkOut));
+}
+
+export function bookedExperienceDates(slug: string, from: string, to: string) {
+  return heldRows('experience', slug)
+    .filter((row) => row.check_in >= from && row.check_in <= to)
+    .map((row) => row.check_in);
+}
+
+export function getBookingSummaryList(): PublicBookingSummary[] {
+  return listBookings();
+}
+
+export interface AdminBookingUpdate {
+  status?: BookingStatus;
+  paymentStatus?: BookingRow['payment_status'];
+  note?: string;
+}
+
+export function adminUpdateBooking(reference: string, update: AdminBookingUpdate): PublicBooking {
+  const row = getBookingRow(reference);
+  if (!row) throw new ApiError(404, 'Booking not found.', 'not_found');
+
+  db.transaction(() => {
+    if (update.status) {
+      db.prepare('UPDATE bookings SET status = ?, updated_at = ? WHERE reference = ?').run(
+        update.status,
+        nowISO(),
+        row.reference
+      );
+    }
+    if (update.paymentStatus) {
+      db.prepare(
+        'UPDATE bookings SET payment_status = ?, updated_at = ? WHERE reference = ?'
+      ).run(update.paymentStatus, nowISO(), row.reference);
+    }
+    recordEvent(
+      row.reference,
+      'admin_update',
+      [update.status && `status:${update.status}`, update.paymentStatus && `payment:${update.paymentStatus}`, update.note]
+        .filter(Boolean)
+        .join(' · ')
+    );
+  })();
+
+  return getBooking(row.reference)!;
+}
+
+export function getBookingEvents(reference: string) {
+  return db
+    .prepare(
+      'SELECT type, detail, created_at FROM booking_events WHERE booking_reference = ? ORDER BY created_at DESC'
+    )
+    .all(reference.toUpperCase()) as Array<{
+    type: string;
+    detail: string | null;
+    created_at: string;
+  }>;
+}
+
+export function getBookingStats() {
+  const totals = db
+    .prepare(
+      `SELECT
+        COUNT(*) as bookings,
+        SUM(CASE WHEN payment_status = 'paid' THEN 1 ELSE 0 END) as paid,
+        SUM(CASE WHEN payment_status IN ('unpaid', 'processing') THEN 1 ELSE 0 END) as open,
+        SUM(CASE WHEN status = 'cancelled' THEN 1 ELSE 0 END) as cancelled,
+        COALESCE(SUM(CASE WHEN payment_status = 'paid' THEN total ELSE 0 END), 0) as revenue,
+        COALESCE(SUM(CASE WHEN payment_status = 'paid' AND created_at >= ? THEN total ELSE 0 END), 0) as revenue30
+       FROM bookings`
+    )
+    .get(minutesAgoISO(60 * 24 * 30)) as {
+    bookings: number;
+    paid: number;
+    open: number;
+    cancelled: number;
+    revenue: number;
+    revenue30: number;
+  };
+
+  const recent = db
+    .prepare('SELECT * FROM bookings ORDER BY created_at DESC LIMIT 8')
+    .all() as BookingRow[];
+
+  return {
+    ...totals,
+    recent: recent.map(toPublicBookingSummary),
+  };
+}

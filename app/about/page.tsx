@@ -46,8 +46,8 @@ const steps = [
     copy: 'A real person on our team suggests stays and experiences, with honest notes on each.',
   },
   {
-    title: 'You confirm, then pay',
-    copy: 'No online payment. Once a host confirms, we send MoMo, Airtel Money or card options.',
+    title: 'Book and pay online',
+    copy: 'Choose your dates, reserve instantly and pay securely with MTN MoMo, Airtel Money, Visa or Mastercard.',
   },
 ];
 

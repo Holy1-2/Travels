@@ -7,6 +7,7 @@ import SvgDefs from '@/components/SvgDefs';
 import SmoothScroll from '@/components/SmoothScroll';
 import ScrollProgress from '@/components/ScrollProgress';
 import { FavoritesProvider } from '@/components/FavoritesProvider';
+import SiteChrome from '@/components/SiteChrome';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -21,6 +22,11 @@ const manrope = Manrope({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
+      process.env.SITE_URL?.trim() ||
+      'http://localhost:3000'
+  ),
   title: {
     default: 'Hamubere Travels — Stay and explore Rwanda',
     template: '%s · Hamubere Travels',
@@ -59,15 +65,22 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <SvgDefs />
           <SmoothScroll />
           <ScrollProgress />
-          <a
-            href="#main"
-            className="sr-only z-[60] rounded-full bg-forest px-5 py-3 text-white focus:not-sr-only focus:fixed focus:left-4 focus:top-4"
+          <SiteChrome
+            header={
+              <>
+                <a
+                  href="#main"
+                  className="sr-only z-[60] rounded-full bg-forest px-5 py-3 text-white focus:not-sr-only focus:fixed focus:left-4 focus:top-4"
+                >
+                  Skip to content
+                </a>
+                <Header />
+              </>
+            }
+            footer={<Footer />}
           >
-            Skip to content
-          </a>
-          <Header />
-          <main id="main">{children}</main>
-          <Footer />
+            <main id="main">{children}</main>
+          </SiteChrome>
         </FavoritesProvider>
       </body>
     </html>

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ArrowUpRight, Heart, Menu, X } from 'lucide-react';
+import { ArrowUpRight, CalendarCheck, Heart, Menu, X } from 'lucide-react';
 import Logo from './Logo';
 import { useFavorites } from './FavoritesProvider';
 import { cn } from '@/lib/utils';
@@ -83,6 +83,15 @@ export default function Header() {
             <span className="mx-1.5 hidden h-5 w-px bg-line xl:block" aria-hidden="true" />
 
             <Link
+              href="/bookings"
+              aria-label="Find or manage a booking"
+              title="Find a booking"
+              className="hidden h-10 w-10 place-items-center rounded-full text-ink transition hover:bg-soft sm:grid"
+            >
+              <CalendarCheck className="h-[19px] w-[19px]" strokeWidth={1.8} />
+            </Link>
+
+            <Link
               href="/favorites"
               aria-label={`Saved stays${ready && favorites.length ? ` (${favorites.length})` : ''}`}
               className="relative grid h-10 w-10 place-items-center rounded-full text-ink transition hover:bg-soft"
@@ -141,6 +150,13 @@ export default function Header() {
                   <ArrowUpRight className="h-4 w-4 opacity-40" />
                 </Link>
               ))}
+              <Link
+                href="/bookings"
+                className="flex items-center justify-between border-b border-line/70 py-3.5 text-[16px] font-medium text-mute transition hover:text-ink"
+              >
+                Find a booking
+                <CalendarCheck className="h-4 w-4 opacity-40" />
+              </Link>
               <Link
                 href="/list-property"
                 className="flex items-center justify-between border-b border-line/70 py-3.5 text-[16px] font-medium text-mute transition hover:text-ink"

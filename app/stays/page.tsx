@@ -4,13 +4,16 @@ import { ArrowUpRight, CalendarDays, CreditCard, MapPin } from 'lucide-react';
 import SearchBar from '@/components/SearchBar';
 import StaysExplorer from '@/components/StaysExplorer';
 import Reveal from '@/components/Reveal';
-import { stays } from '@/lib/data';
+import { regions } from '@/lib/data';
+import { getStays } from '@/lib/server/content';
 import { firstParam } from '@/lib/utils';
+
+export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
   title: 'Stays',
   description:
-    'Browse 12 handpicked hotels, lodges, camps, villas and guesthouses across Rwanda. Filter by region and stay type, with prices in RWF.',
+    'Browse handpicked hotels, lodges, camps, villas and guesthouses across Rwanda. Filter by region and stay type, with prices in RWF.',
 };
 
 export default async function StaysPage({
@@ -25,6 +28,8 @@ export default async function StaysPage({
   const checkIn = firstParam(params.checkin);
   const checkOut = firstParam(params.checkout);
   const guests = firstParam(params.guests);
+  const stays = getStays();
+  const regionCount = new Set(stays.map((stay) => stay.region)).size;
 
   return (
     <div>
@@ -43,7 +48,8 @@ export default async function StaysPage({
             </div>
             <div className="flex items-center gap-2.5 rounded-full border border-line bg-white px-4 py-2.5 text-[12px] text-mute">
               <MapPin className="h-4 w-4 text-forest" strokeWidth={1.8} />
-              6 regions · 12 stays · prices in RWF
+              {regionCount} {regionCount === 1 ? 'region' : 'regions'} · {stays.length}{' '}
+              {stays.length === 1 ? 'stay' : 'stays'} · prices in RWF
             </div>
           </div>
 
@@ -55,6 +61,8 @@ export default async function StaysPage({
 
       <section className="wrap mt-8 pb-2">
         <StaysExplorer
+          stays={stays}
+          regions={regions}
           initialType={initialType}
           initialRegion={initialRegion}
           initialSort={initialSort}
@@ -75,8 +83,8 @@ export default async function StaysPage({
               },
               {
                 icon: CreditCard,
-                title: 'No online payment',
-                copy: 'Request first. Pay your host by MoMo, Airtel Money or card once confirmed.',
+                title: 'Pay in the app',
+                copy: 'Reserve online, then pay securely with MoMo, Airtel Money, Visa or Mastercard.',
               },
               {
                 icon: MapPin,

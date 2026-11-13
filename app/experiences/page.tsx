@@ -3,8 +3,11 @@ import Link from 'next/link';
 import { ArrowRight, Compass, HeartHandshake, ShieldCheck, Users } from 'lucide-react';
 import ExperienceExplorer from '@/components/ExperienceExplorer';
 import Reveal from '@/components/Reveal';
-import { experiences } from '@/lib/data';
+import { regions } from '@/lib/data';
+import { getExperiences } from '@/lib/server/content';
 import { firstParam } from '@/lib/utils';
+
+export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
   title: 'Experiences',
@@ -37,6 +40,7 @@ export default async function ExperiencesPage({
 }) {
   const params = await searchParams;
   const initialRegion = firstParam(params.region);
+  const experiences = getExperiences();
 
   return (
     <div>
@@ -48,8 +52,8 @@ export default async function ExperiencesPage({
               Mornings you will <span className="text-forest">talk about.</span>
             </h1>
             <p className="max-w-md text-[15px] leading-relaxed text-mute">
-              Ten experiences, from a quiet hour with mountain gorillas to a sunset boat on Lake
-              Kivu. Led by people who live here.
+              {experiences.length} experiences, from a quiet hour with mountain gorillas to a
+              sunset boat on Lake Kivu. Led by people who live here.
             </p>
           </div>
 
@@ -58,7 +62,7 @@ export default async function ExperiencesPage({
               <Compass className="h-4 w-4 text-forest" strokeWidth={1.8} />
               {experiences.length} experiences
             </span>
-            <span>6 regions</span>
+            <span>{regions.length} regions</span>
             <span>Local guides</span>
             <span>Prices in RWF</span>
           </div>
@@ -66,7 +70,11 @@ export default async function ExperiencesPage({
       </section>
 
       <section className="wrap mt-8">
-        <ExperienceExplorer initialRegion={initialRegion} />
+        <ExperienceExplorer
+          experiences={experiences}
+          regions={regions}
+          initialRegion={initialRegion}
+        />
       </section>
 
       <section className="wrap mt-16">

@@ -2,6 +2,9 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 import FavoritesList from '@/components/FavoritesList';
+import { getStays } from '@/lib/server/content';
+
+export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
   title: 'Saved stays',
@@ -28,7 +31,7 @@ export default function FavoritesPage() {
         </Link>
       </div>
 
-      <FavoritesList />
+      <FavoritesList stays={getStays()} />
     </div>
   );
 }

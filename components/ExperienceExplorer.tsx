@@ -4,10 +4,18 @@ import { useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { LayoutGrid, X } from 'lucide-react';
 import ExperienceCard from './ExperienceCard';
-import { experiences, regions } from '@/lib/data';
+import type { Experience, Region } from '@/lib/data';
 import { cn } from '@/lib/utils';
 
-export default function ExperienceExplorer({ initialRegion }: { initialRegion?: string }) {
+export default function ExperienceExplorer({
+  experiences,
+  regions,
+  initialRegion,
+}: {
+  experiences: Experience[];
+  regions: Region[];
+  initialRegion?: string;
+}) {
   const [region, setRegion] = useState<string>(
     initialRegion && regions.some((item) => item.slug === initialRegion) ? initialRegion : 'All'
   );
@@ -17,7 +25,7 @@ export default function ExperienceExplorer({ initialRegion }: { initialRegion?: 
       region === 'All'
         ? experiences
         : experiences.filter((experience) => experience.region === region),
-    [region]
+    [experiences, region]
   );
 
   const activeRegion = regions.find((item) => item.slug === region);
